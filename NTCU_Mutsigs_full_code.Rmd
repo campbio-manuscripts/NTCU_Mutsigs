@@ -1,0 +1,830 @@
+---
+title: "Defining mutational signatures of lung cancer-associated carcinogens through in vitro exposure of human airway epithelial cells"
+author: "Natasha Gurevich"
+date: "2026-02-24"
+output: word_document
+---
+
+# Setup
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+library(musicatk)
+library(plyr)
+library(factoextra)
+library(ggrepel)
+library(pca.utils)
+library(ggpubr)
+library(corrplot)
+library(RColorBrewer)
+library(lsa)
+library(rstatix)
+library(tidyverse)
+library(readxl)
+
+```
+
+# Load Variants
+
+```{r}
+
+# Read in variants
+all_variants <- read.csv("sample_variants.csv")
+
+# select genome
+g <- select_genome("hg38")
+
+# create musica object
+musica_all <- create_musica_from_variants(x = all_variants, genome = g)
+
+# build mutation count tables
+build_standard_table(musica_all, g = g, modality = "SBS96")
+build_standard_table(musica_all, g = g, modality = "DBS78")
+build_standard_table(musica_all, g = g, modality = "IND83")
+
+# add annotations to group by
+samp_annot(musica_all, "Exposure") <- c(rep("BaP", 4), rep("control_acetone", 3), rep("control_DMSO", 3), rep("control", 3), rep("NNK_0.01", 4), rep("NNK_1.0", 4), rep("NTCU", 4))
+
+
+```
+
+# K value assist to determine number of signatures
+
+```{r}
+
+sbs_k_trial <- compare_k_vals(musica_all, modality = "SBS96", reps = 50, min_k = 1, max_k = 5, error_type =  "prop", algorithm = "nmf")
+
+```
+
+
+# Figure 1: experimental design
+
+## Fig 1a: NTCU viability
+
+```{r}
+
+# create df
+ntcu_df <- data.frame(Concentration = c("0", "act", "0.1", "0.25", "0.5", "0.75", "1", "2"),
+                 mean = c(100, 97.65, 86.52, 58.7, 41.66, 25.13, 24.56, 4.28),
+                 sd = c(2.43, 8.17, 8.14, 4.88, 5.44, 10.15, 6.35, 1.01))
+
+ntcu_df$Concentration <- factor(ntcu_df$Concentration, levels=unique(ntcu_df$Concentration))
+
+# plot
+fig1a <- ggplot(ntcu_df, aes(x=Concentration, y=mean, group = 1)) + 
+  geom_line() + 
+  geom_point() +
+  geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd), width = 0.2, color = "darkgray") +
+  scale_linetype_manual(name = NULL) +
+  scale_y_continuous(limits = c(0, 120), breaks = seq(0, 100, by = 20)) +
+  ggtitle("Viability - NTCU day 7") +
+  labs(y = "Percent Viability") +
+  theme_bw() +
+  theme(legend.position = "inside",
+      legend.position.inside = c(0.85,0.7))
+
+fig1a
+
+```
+
+## Fig 1b: NTCU LA-QPCR
+
+```{r}
+
+ntcu_df <- data.frame(Treatment = c(rep(c("Control", "Acetone 1%", "NTCU 0.5uM 1h", "NTCU 0.5 uM 24h"), 2)),
+                 lm = c(rep("without", 4), rep("with", 4)),
+                 mean = c(0.01, -0.01, 0.95, 0.74, -0.10, -0.07, 0.23, 0.08),
+                 sd = c(0.02, 0.17, 0.18, 0.20, NA, 0.06, 0.02, 0.08))
+
+ntcu_df$Treatment <- factor(ntcu_df$Treatment, levels=unique(ntcu_df$Treatment))
+
+fig1b <- ggplot(ntcu_df, aes(fill=lm, y=mean, x=Treatment)) + 
+  geom_bar(position="dodge", stat="identity") +
+  geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd), width = 0.2, color = "darkgray", position=position_dodge(.9)) +
+  scale_fill_manual("liver microsome +\nNADPH status", values = c("with" = "steelblue2", "without" = "red2")) +
+  geom_text(aes(x = Treatment, y = mean,label=mean), vjust=-0.25, position=position_dodge(.9), size = 3) +
+  ggtitle("Mitochondrial LA-QPCR") +
+  labs(y = "lesion / 10 kb") +
+  theme_bw() +
+  theme(legend.position = "inside",
+      legend.position.inside = c(0.25,0.7))
+
+fig1b
+
+```
+
+# Figure 2: SBS patterns for BaP and NTCU treated samples are distinct from controls
+
+## Figure 2a - example mutation profiles
+
+```{r}
+
+fig2a <- plot_sample_counts(musica_all, c("BaP_5nM_DMSO_rep2", "NTCU_0.5nM_Acetone_rep2", "NNK_0.01nM_DMSO_rep2", "NNK_1.0nM_DMSO_rep2", "control_rep2"), "SBS96", same_scale = FALSE, text_size = 12)
+
+fig2a
+
+```
+
+## Figure 2b - correlation plot
+
+```{r}
+
+# extract counts
+count_table_for_correlation <- get_count_table(tables(musica_all)$SBS96)
+
+# rename columns
+colnames(count_table_for_correlation) <- c("BaP 1", "BaP 2", "BaP 3", "BaP 4", "control acetone 1", "control acetone 2", "control acetone 3", "control DMSO 1", "controlDMSO 2", "control DMSO 3", "control no solvent 1", "control no solvent 2", "control no solvent 3", "NNK low 1", "NNL low 2", "NNK low 3", "NNK low 4", "NNK high 1", "NNK high 2", "NNK high 3", "NNK high 4", "NTCU 1", "NTCU 2", "NTCU 3", "NTCU 4")
+
+# reorder
+count_table_for_correlation <- sbs_counts[,c(11,12,13,5,6,7,8,9,10,1,2,3,22,23,24,25,14,15,16,17,18,19,20,21)]
+
+# calculate correlations
+correlation <- cosine(count_table_for_correlation)
+
+fig2b <- corrplot(correlation, is.corr = FALSE, type="lower", method = "color", outline = TRUE, order="original",
+         tl.col = "black", col=rev(brewer.pal(n=7, name="Spectral")))
+
+fig2b
+
+
+```
+
+## Figure 2c - total mutational load
+
+```{r}
+
+# extract total mutation counts
+sbs_counts <- get_count_table(tables(musica_all)$SBS96)
+mut_counts <- colSums(sbs_counts)
+
+# control counts
+count_combined_control_df <- data.frame(exposure=c(rep("BaP", 4), rep("control", 3), rep("control", 3), rep("control", 3), rep("NNK_low", 4), rep("NNK_high", 4), rep("NTCU", 4)), num_mutations=mut_counts)
+count_combined_control_df$exposure <- as.factor(count_combined_control_df$exposure)
+
+# add log10
+count_combined_control_df$log_muts <- log10(count_combined_control_df$num_mutations)
+
+# add log2
+count_combined_control_df$log2_muts <- log2(count_combined_control_df$num_mutations)
+
+# specify comparisons
+comparisons <- list(c("NNK_low", "NNK_high"), c("control", "NNK_high"), c("control", "NNK_low"), c("control", "NTCU"), c("control", "BaP") )
+
+# compute t test
+p_vals <- t_test(count_combined_control_df, log_muts ~ exposure, comparisons = comparisons, p.adjust.method = "BH", detailed = TRUE)
+p_vals <- p_vals %>% add_y_position()
+
+p_vals_log2 <- t_test(count_combined_control_df, log2_muts ~ exposure, comparisons = comparisons, p.adjust.method = "BH", detailed = TRUE)
+
+# plot
+fig2c <- ggplot(count_combined_control_df, aes(x=exposure, y=num_mutations)) + geom_boxplot(outlier.shape = NA) + scale_y_log10(labels = scales::label_comma()) + geom_jitter(size = 3) + theme_classic() + labs(title="Total SBS Mutations", x="Exposure", y="Number of Mutations") + scale_x_discrete(limits=c("control", "BaP", "NTCU", "NNK_low", "NNK_high"))  + stat_pvalue_manual(p_vals, label = "p.adj") + theme(legend.position="none", text = element_text(size = 17))
+
+fig2c
+
+# calculate fold changes and CIs
+raw_fold_change_NTCU <- 1/(exp(-0.561))
+raw_CI_high_NTCU <- 1/(exp(-0.706))
+raw_CI_low_NTCU <- 1/(exp(-0.416))
+
+raw_fold_change_BaP <- exp(0.838)
+raw_CI_low_BaP <- exp(0.296)
+raw_CI_high_BaP <- exp(1.38)
+
+```
+
+## Figure 2d - SNR
+
+```{r signal to noise ratio}
+
+# mutation counts for each group
+control_counts <- sbs_counts[,c(5:13)]
+BaP_counts <- sbs_counts[,c(1:4)]
+NTCU_counts <- sbs_counts[,c(22:25)]
+NNK_counts <- sbs_counts[,14:21]
+
+# mean mutation counts per group
+M_control <- as.data.frame(rowMeans(control_counts))
+M_BaP <- as.data.frame(rowMeans(BaP_counts))
+M_NTCU <- as.data.frame(rowMeans(NTCU_counts))
+M_NNK <- as.data.frame(rowMeans(NNK_counts))
+
+# sd for each group
+sd_control <- sd(control_counts)
+sd_BaP <- sd(BaP_counts)
+sd_NTCU <- sd(NTCU_counts)
+sd_NNK <- sd(NNK_counts)
+
+# calculate SNR
+SNR_BaP <- norm((M_BaP - M_control), type = "2") / (sd_BaP + sd_control)
+SNR_NTCU <- norm((M_NTCU - M_control), type = "2") / (sd_NTCU + sd_control)
+SNR_NNK <- norm((M_NNK - M_control), type = "2") / (sd_NNK + sd_control)
+
+# create df
+SNR_df <- data.frame(Group = c("BaP", "NTCU", "NNK"), SNR = c(SNR_BaP, SNR_NTCU, SNR_NNK))
+
+# plot
+fig2d <- ggplot(data=SNR_df, aes(x=Group, y=SNR)) + 
+  geom_bar(stat="identity", color = "black", fill = "black") + 
+  scale_x_discrete(limits=c("BaP", "NTCU", "NNK")) +
+  scale_y_continuous(limits = c(0,10), breaks = c(0,2,4,6,8,10))+
+  geom_text(aes(label=round(SNR, 2)), vjust=-0.7, size=4) +
+  theme_classic() +
+  theme(text = element_text(size = 17)) +
+  labs(title = "Signal to Noise Ratio", x = "Treatment Group", y = "SNR") +
+  geom_hline(yintercept = 2, linewidth = 1, col = "red3")
+
+fig2d
+
+
+```
+
+# Predict SBS signatures
+
+```{r discover signatures}
+
+discover_signatures(musica = musica_all, modality = "SBS96", 
+                    num_signatures = 3, algorithm = "nmf", 
+                    nstart = 10)
+
+```
+
+```{r reorder signatures}
+
+# change the order in the signatures and the exposures
+
+# rearrange the signatures 
+
+# access the signatures
+sig_1 <- signatures(musica_all, "result", "SBS96", "nmf3")[,1]
+sig_2 <- signatures(musica_all, "result", "SBS96", "nmf3")[,2]
+sig_3 <- signatures(musica_all, "result", "SBS96", "nmf3")[,3]
+
+# put back in new order
+signatures(musica_all, "result", "SBS96", "nmf3")[,1] <- sig_3
+signatures(musica_all, "result", "SBS96", "nmf3")[,2] <- sig_1
+signatures(musica_all, "result", "SBS96", "nmf3")[,3] <- sig_2
+
+# rearrange the exposures 
+
+# access the exposures
+exp_1 <- exposures(musica_all, "result", "SBS96", "nmf3")[1,]
+exp_2 <- exposures(musica_all, "result", "SBS96", "nmf3")[2,]
+exp_3 <- exposures(musica_all, "result", "SBS96", "nmf3")[3,]
+
+# put back in new order
+exposures(musica_all, "result", "SBS96", "nmf3")[1,] <- exp_3
+exposures(musica_all, "result", "SBS96", "nmf3")[2,] <- exp_1
+exposures(musica_all, "result", "SBS96", "nmf3")[3,] <- exp_2
+
+```
+
+# Figure 3: Deconvolution of SBS signatures from treated AALEs
+
+## Figure 3a - signatures
+
+```{r}
+
+# Plot signatures
+
+fig3a <- plot_signatures(musica_all, "nmf3", same_scale = FALSE)
+
+fig3a
+
+```
+
+## Figure 3b - exposures
+
+```{r}
+
+# plot exposures by group
+
+fig3b <- plot_exposures(musica_all, "nmf3", plot_type = "bar", group_by = "annotation", annotation = "Exposure", proportional = TRUE)
+fig3b
+
+```
+
+## Figure 3c - comparison to COSMIC
+
+```{r}
+
+# Comparing to external signatures
+
+fig3c <- compare_cosmic_v3(musica_all, "nmf3", sample_type = "genome", modality = "SBS96", threshold = 0.8, result_rename = "Predicted Signatures")
+fig3c
+
+```
+
+## Figure 3d - comparison to Gómez-López et al. 2025
+
+```{r}
+
+# load variants
+gl_variants <- as.data.frame(read_excel("Murine_Variant_Calls_Gomez-Lopez_2025.xlsx"))
+
+# add column for variant end position
+gl_variants$end <- gl_variants$Pos
+
+# select genome
+g <- select_genome("mm10")
+
+# create musica
+gl_musica <- create_musica_from_variants(gl_variants, g, start_col = "Pos", chromosome_col = "Chrom", sample_col = "sampleID")
+
+# build SBS table
+build_standard_table(gl_musica, g, "SBS96")
+
+# discover signatures (1 signature and 2 signatures)
+discover_signatures(gl_musica, "SBS96", 1, algorithm = "nmf")
+discover_signatures(gl_musica, "SBS96", 2, algorithm = "nmf")
+
+# combine the two results into one matrix for easier plotting
+signatures(gl_musica, "result", "SBS96", "nmf2") <- cbind(signatures(gl_musica, "result", "SBS96", "nmf2"), signatures(gl_musica, "result", "SBS96", "nmf1"))
+colnames(signatures(gl_musica, "result", "SBS96", "nmf2")) <- c("Component 1 (NTCU Signature)", "Component 2", "All data")
+
+# plot and compare signatures
+fig3d <- compare_results(musica = musica_all, model_id = "nmf3", other_model_id = "nmf2", other_musica = gl_musica, threshold = 0.7, result_rename = "Predicted NTCU signature", other_result_rename = "Gómez-López et al. 2025")
+fig3d
+
+```
+
+# Supplementary Figure 1: Cytotoxicity and DNA damage response analysis for BaP and NNK
+
+## Fig S1a: BaP viability analysis
+```{r}
+
+bap_df <- data.frame(Treatment = c(rep(c("Control", "DMSO 1%", "BaP 0.2uM", "BaP 1uM", "BaP 5uM", "BaP 25uM", "BaP 50uM"), 2)),
+                 lm = c(rep("without", 7), rep("with", 7)),
+                 mean = c(100, 98, 99, 102, 90, 83, 66, 92, 88, 69, 47, 44, 43, 37),
+                 sd = c(0, 0.86, 2.6, 2.75, 4.56, 0, 0, 1.47, 4.1, 1.56, 7.03, 5.11, 3.91, 14.46))
+
+bap_df$Treatment <- factor(bap_df$Treatment, levels=unique(bap_df$Treatment))
+
+figS1a <- ggplot(bap_df, aes(fill=lm, y=mean, x=Treatment)) + 
+    geom_bar(position="dodge", stat="identity") +
+  geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd), width = 0.2, color = "darkgray", position=position_dodge(.9)) +
+  scale_fill_manual("liver microsome +\nNADPH status", values = c("with" = "steelblue2", "without" = "red2")) +
+  geom_text(aes(x = Treatment, y = mean,label=mean), vjust=-0.25, position=position_dodge(.9), size = 3) +
+  ggtitle("BaP Viability") +
+  labs(y = "Viability") +
+  theme_bw() +
+  theme(legend.position = "inside",
+      legend.position.inside = c(0.16,0.2))
+
+figS1a
+
+```
+## Fig S1b: BaP DNA damage response analysis
+
+```{r}
+
+bap_df <- data.frame(Treatment = c(rep(c("Control", "DMSO 1%", "BaP 5uM 1h", "BaP 5uM 24h", "BaP 5uM 48h", "BaP 5uM 72h"), 2)),
+                 lm = c(rep("without", 6), rep("with", 6)),
+                 mean = c(0.01, 0.08, 0.09, 0.09, -0.05, 0.27, -0.03, -0.04, -0.03, 0.03, 0.02, 0.4),
+                 sd = c(0.02, 0.08, 0.1, 0.11, 0, 0.07, 0, 0, 0, 0, 0, 0.06))
+
+bap_df$Treatment <- factor(bap_df$Treatment, levels=unique(bap_df$Treatment))
+
+figS1b <- ggplot(bap_df, aes(fill=lm, y=mean, x=Treatment)) + 
+    geom_bar(position="dodge", stat="identity") +
+  geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd), width = 0.2, color = "darkgray", position=position_dodge(.9)) +
+  scale_fill_manual("liver microsome +\nNADPH status", values = c("with" = "steelblue2", "without" = "red2")) +
+  geom_text(aes(x = Treatment, y = mean,label=mean), vjust=-0.25, position=position_dodge(.9), size = 3) +
+  ggtitle("BaP Mitochondrial LA-QPCR") +
+  labs(y = "lesion / 10 kb") +
+  theme_bw() +
+  theme(legend.position = "inside",
+      legend.position.inside = c(0.25,0.7))
+
+figS1b
+
+```
+
+## Fig S1c: NNK Viability analysis
+
+```{r}
+
+nnk_df <- data.frame(Treatment = c(rep(c("Control", "DMSO 1%", "NNK 0.01uM", "NNK 0.1uM", "NNK 1uM", "NNK 10uM", "NNK 100uM"), 2)),
+                 lm = c(rep("without", 7), rep("with", 7)),
+                 mean = c(100, 97.9, 102, 101.9, 104, 100.8, 81.2, 89.5, 86.4, 90.7, 91.8, 93.1, 86, 39.7),
+                 sd = c(0, 7.83, 2.11, 2.19, 0.71, 5.94, 1.36, 3.5, 2.29, 2.8, 2.06, 0.35, 3.97, 0.31))
+
+nnk_df$Treatment <- factor(nnk_df$Treatment, levels=unique(nnk_df$Treatment))
+
+figS1c <- ggplot(nnk_df, aes(fill=lm, y=mean, x=Treatment)) + 
+    geom_bar(position="dodge", stat="identity") +
+  geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd), width = 0.2, color = "darkgray", position=position_dodge(.9)) +
+  scale_fill_manual("liver microsome +\nNADPH status", values = c("with" = "steelblue2", "without" = "red2")) +
+  geom_text(aes(x = Treatment, y = mean,label=mean), vjust=-0.25, position=position_dodge(.9), size = 3) +
+  ggtitle("NNK Viability") +
+  labs(y = "Viability") +
+  theme_bw() +
+  theme(legend.position = "inside",
+      legend.position.inside = c(0.16,0.2))
+
+figS1c
+
+```
+
+## Fig S1d: NNK DNA damage response analysis
+
+```{r}
+
+nnk_df <- data.frame(Treatment = c(rep(c("Control", "DMSO 1%", "NNK 0.01uM", "NNK 0.1uM", "NNK 1uM", "NNK 10uM", "NNK 100uM"), 2)),
+                 lm = c(rep("without", 7), rep("with", 7)),
+                 mean = c(0.01, 0.11, 0.05, 0.10, 0.01, 0.01, 0.08, -0.02, -0.01, -0.03, 0.04, 0.04, 0.02, 0.06),
+                 sd = c(0.01, 0.06, 0.04, 0.15, 0.08, 0.05, 0.04, 0, 0.08, 0.05, 0.04, 0.04, 0.07, 0))
+
+nnk_df$Treatment <- factor(nnk_df$Treatment, levels=unique(nnk_df$Treatment))
+
+figS1d <- ggplot(nnk_df, aes(fill=lm, y=mean, x=Treatment)) + 
+    geom_bar(position="dodge", stat="identity") +
+  geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd), width = 0.2, color = "darkgray", position=position_dodge(.9)) +
+  #scale_y_continuous(limits = c(0, 120), breaks = seq(0, 100, by = 20)) +
+  scale_fill_manual("liver microsome +\nNADPH status", values = c("with" = "steelblue2", "without" = "red2")) +
+  geom_text(aes(x = Treatment, y = mean,label=mean), vjust=-0.25, position=position_dodge(.9), size = 3) +
+  ggtitle("NNK Mitochondrial LA-QPCR") +
+  labs(y = "lesion / 10 kb") +
+  theme_bw() +
+  theme(legend.position = "inside",
+      legend.position.inside = c(0.8,0.7))
+
+figS1d
+
+
+```
+
+
+
+
+# Supplementary Figure 2: Analysis of control samples
+
+## Figure S2a - mutational load of controls
+
+```{r}
+
+# plot control sample mutation counts
+
+control_df <- data.frame(Sample=c("acetone1", "acetone2", "acetone3", "DMSO1", "DMSO2", "DMSO3", "control1", "control2", "control3"), num_mutations=mut_counts[5:13], Group = c(rep("acetone", 3), rep("DMSO", 3), rep("control", 3)))
+
+figS2a <- ggplot(data=control_df, aes(x=Sample, y=num_mutations, fill = Group)) + 
+  geom_bar(stat="identity") + scale_fill_manual(values=c("#c1272d", "#6495ED", "#eecc16")) + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + ylab("Number of mutations") + scale_x_discrete(limits = c("control1", "control2", "control3", "acetone1", "acetone2", "acetone3", "DMSO1", "DMSO2", "DMSO3"), labels = c(rep("control", 3), rep("acetone", 3), rep("DMSO", 3))) + scale_y_continuous(expand = expansion(mult = c(0, add = 0.05))) + ggtitle("Number of somatic SNVs in controls") + geom_text(aes(label = num_mutations), vjust = -0.5) + theme_classic()  + theme(text = element_text(size = 14)) + theme(legend.position="none")
+
+figS2a
+
+```
+
+## Figure S2b - overlap of somatic SNVs
+
+```{r}
+
+# subset variants to control samples
+control_samples <- c("control_rep1", "control_rep2", "control_rep3", "control_DMSO_rep1", "control_DMSO_rep2", "control_DMSO_rep3", "control_acetone_rep1", "control_acetone_rep2", "control_acetone_rep3")
+control_variants <- all_variants[all_variants$sample %in% control_samples,]
+all_SNVs <- data.frame(sample = control_variants$sample, chrom = control_variants$chr, start = control_variants$start, end = control_variants$end)
+
+# count number of unique SNVs
+unique_SNV_counts <- ddply(all_SNVs, .(all_SNVs$chrom, all_SNVs$start, all_SNVs$end), nrow)
+names(unique_SNV_counts) <- c("chrom", "start", "end", "Freq")
+
+# now count how many times each frequency occurs
+frequency_counts <- ddply(unique_SNV_counts, .(unique_SNV_counts$Freq), nrow)
+names(frequency_counts) <- c("num_samples_with_SNV", "Freq")
+
+# plot
+figS2b <- ggplot(data=frequency_counts, aes(x=num_samples_with_SNV, y=Freq)) +
+  geom_bar(stat="identity", color = "black", fill = "black") + 
+  scale_x_discrete(limits=c("1", "2", "3", "4", "5", "6", "7", "8")) +
+  geom_text(aes(label=Freq), vjust=-0.3, size=4) +
+  theme_classic() +
+  theme(text = element_text(size = 14)) +
+  labs(title = "Overlap of somatic SNVs in controls", x = "Number of samples with SNV", y = "Frequency")
+
+figS2b
+
+```
+
+## Figure S2c - PCA of germline controls
+
+```{r}
+
+# read in germline variants
+control_sample_germline_variants <- read.csv("control_sample_germline_variants.csv")
+
+# separate samples
+C11_germline_variants <- control_sample_germline_variants[control_sample_germline_variants$sample == "control_rep1",]
+C12_germline_variants <- control_sample_germline_variants[control_sample_germline_variants$sample == "control_rep2",]
+C13_germline_variants <- control_sample_germline_variants[control_sample_germline_variants$sample == "control_rep3",]
+
+C21_germline_variants <- control_sample_germline_variants[control_sample_germline_variants$sample == "control_DMSO_rep1",]
+C22_germline_variants <- control_sample_germline_variants[control_sample_germline_variants$sample == "control_DMSO_rep2",]
+C23_germline_variants <- control_sample_germline_variants[control_sample_germline_variants$sample == "control_DMSO_rep3",]
+
+C31_germline_variants <- control_sample_germline_variants[control_sample_germline_variants$sample == "control_acetone_rep1",]
+C32_germline_variants <- control_sample_germline_variants[control_sample_germline_variants$sample == "control_acetone_rep2",]
+C33_germline_variants <- control_sample_germline_variants[control_sample_germline_variants$sample == "control_acetone_rep3",]
+
+# get unique variants in each sample and remove unneeded info
+C11 <- unique(data.frame(sample = C11_germline_variants$sample, chrom = C11_germline_variants$chr, start = C11_germline_variants$start, end = C11_germline_variants$end))
+C12 <- unique(data.frame(sample = C12_germline_variants$sample, chrom = C12_germline_variants$chr, start = C12_germline_variants$start, end = C12_germline_variants$end))
+C13 <- unique(data.frame(sample = C13_germline_variants$sample, chrom = C13_germline_variants$chr, start = C13_germline_variants$start, end = C13_germline_variants$end))
+
+C21 <- unique(data.frame(sample = C21_germline_variants$sample, chrom = C21_germline_variants$chr, start = C21_germline_variants$start, end = C21_germline_variants$end))
+C22 <- unique(data.frame(sample = C22_germline_variants$sample, chrom = C22_germline_variants$chr, start = C22_germline_variants$start, end = C22_germline_variants$end))
+C23 <- unique(data.frame(sample = C23_germline_variants$sample, chrom = C23_germline_variants$chr, start = C23_germline_variants$start, end = C23_germline_variants$end))
+
+C31 <- unique(data.frame(sample = C31_germline_variants$sample, chrom = C31_germline_variants$chr, start = C31_germline_variants$start, end = C31_germline_variants$end))
+C32 <- unique(data.frame(sample = C32_germline_variants$sample, chrom = C32_germline_variants$chr, start = C32_germline_variants$start, end = C32_germline_variants$end))
+C33 <- unique(data.frame(sample = C33_germline_variants$sample, chrom = C33_germline_variants$chr, start = C33_germline_variants$start, end = C33_germline_variants$end))
+
+# combine all samples
+control_germline_SNPs <- rbind(C11, C12, C13, C21, C22, C23, C31, C32, C33)
+
+# get only unique SNPs
+unique_control_germline_SNP_counts <- ddply(control_germline_SNPs, .(control_germline_SNPs$chrom, control_germline_SNPs$start, control_germline_SNPs$end), nrow)
+names(unique_control_germline_SNP_counts) <- c("chrom", "start", "end", "Freq")
+
+```
+
+
+```{r}
+
+# add snp codes (individual identifiers) to individual sample snp lists
+C11$snp_code <- paste(C11$chrom, C11$start, C11$end, sep = ".")
+C12$snp_code <- paste(C12$chrom, C12$start, C12$end, sep = ".")
+C13$snp_code <- paste(C13$chrom, C13$start, C13$end, sep = ".")
+
+C21$snp_code <- paste(C21$chrom, C21$start, C21$end, sep = ".")
+C22$snp_code <- paste(C22$chrom, C22$start, C22$end, sep = ".")
+C23$snp_code <- paste(C23$chrom, C23$start, C23$end, sep = ".")
+
+C31$snp_code <- paste(C31$chrom, C31$start, C31$end, sep = ".")
+C32$snp_code <- paste(C32$chrom, C32$start, C32$end, sep = ".")
+C33$snp_code <- paste(C33$chrom, C33$start, C33$end, sep = ".")
+
+#determine snps that are in all samples
+common_control_germline_snps <- unique_control_germline_SNP_counts[unique_control_germline_SNP_counts$Freq == 9, c(1,2,3)]
+common_control_germline_snps <- paste(common_control_germline_snps$chrom, common_control_germline_snps$start, common_control_germline_snps$end, sep = ".")
+
+# remove snps present in all samples from individual sample snp lists
+C11_filtered <- C11[!(C11$snp_code %in% common_control_germline_snps),]
+C12_filtered <- C12[!(C12$snp_code %in% common_control_germline_snps),]
+C13_filtered <- C13[!(C13$snp_code %in% common_control_germline_snps),]
+
+C21_filtered <- C21[!(C21$snp_code %in% common_control_germline_snps),]
+C22_filtered <- C22[!(C22$snp_code %in% common_control_germline_snps),]
+C23_filtered <- C23[!(C23$snp_code %in% common_control_germline_snps),]
+
+C31_filtered <- C31[!(C31$snp_code %in% common_control_germline_snps),]
+C32_filtered <- C32[!(C32$snp_code %in% common_control_germline_snps),]
+C33_filtered <- C33[!(C33$snp_code %in% common_control_germline_snps),]
+
+#determine snps that are in only one sample
+unique_snps <- unique_control_germline_SNP_counts[unique_control_germline_SNP_counts$Freq == 1, c(1,2,3)]
+unique_snps <- paste(unique_snps$chrom, unique_snps$start, unique_snps$end, sep = ".")
+
+# remove snps that are in only one sample from individual sample snp lists
+C11_filtered2 <- C11_filtered[!(C11_filtered$snp_code %in% unique_snps),]
+C12_filtered2 <- C12_filtered[!(C12_filtered$snp_code %in% unique_snps),]
+C13_filtered2 <- C13_filtered[!(C13_filtered$snp_code %in% unique_snps),]
+
+C21_filtered2 <- C21_filtered[!(C21_filtered$snp_code %in% unique_snps),]
+C22_filtered2 <- C22_filtered[!(C22_filtered$snp_code %in% unique_snps),]
+C23_filtered2 <- C23_filtered[!(C23_filtered$snp_code %in% unique_snps),]
+
+C31_filtered2 <- C31_filtered[!(C31_filtered$snp_code %in% unique_snps),]
+C32_filtered2 <- C32_filtered[!(C32_filtered$snp_code %in% unique_snps),]
+C33_filtered2 <- C33_filtered[!(C33_filtered$snp_code %in% unique_snps),]
+
+# get list of unique snp codes remaining
+snp_list <- c(C11_filtered2$snp_code, C12_filtered2$snp_code, C13_filtered2$snp_code, C21_filtered2$snp_code, C22_filtered2$snp_code, C23_filtered2$snp_code,C31_filtered2$snp_code, C32_filtered2$snp_code, C33_filtered2$snp_code)
+
+# ensure uniqueness and get reference order
+snp_list <- unique(snp_list)
+
+# make dataframe of presence of all snps
+
+#C11
+C11_present_snps <- data.frame(snp = C11_filtered2$snp_code, presence = rep(1, length(C11_filtered2$snp_code)))
+snps_not_in_C11 <- snp_list[!(snp_list %in% C11_present_snps$snp)]
+C11_missing_snps_df <- data.frame(snp = snps_not_in_C11, presence = rep(0, length(snps_not_in_C11)))
+C11_snp_presence <- rbind(C11_present_snps, C11_missing_snps_df)
+C11_snp_presence <- C11_snp_presence[order(C11_snp_presence$snp),]
+
+#C12
+C12_present_snps <- data.frame(snp = C12_filtered2$snp_code, presence = rep(1, length(C12_filtered2$snp_code)))
+snps_not_in_C12 <- snp_list[!(snp_list %in% C12_present_snps$snp)]
+C12_missing_snps_df <- data.frame(snp = snps_not_in_C12, presence = rep(0, length(snps_not_in_C12)))
+C12_snp_presence <- rbind(C12_present_snps, C12_missing_snps_df)
+C12_snp_presence <- C12_snp_presence[order(C12_snp_presence$snp),]
+
+#C13
+C13_present_snps <- data.frame(snp = C13_filtered2$snp_code, presence = rep(1, length(C13_filtered2$snp_code)))
+snps_not_in_C13 <- snp_list[!(snp_list %in% C13_present_snps$snp)]
+C13_missing_snps_df <- data.frame(snp = snps_not_in_C13, presence = rep(0, length(snps_not_in_C13)))
+C13_snp_presence <- rbind(C13_present_snps, C13_missing_snps_df)
+C13_snp_presence <- C13_snp_presence[order(C13_snp_presence$snp),]
+
+#C21
+C21_present_snps <- data.frame(snp = C21_filtered2$snp_code, presence = rep(1, length(C21_filtered2$snp_code)))
+snps_not_in_C21 <- snp_list[!(snp_list %in% C21_present_snps$snp)]
+C21_missing_snps_df <- data.frame(snp = snps_not_in_C21, presence = rep(0, length(snps_not_in_C21)))
+C21_snp_presence <- rbind(C21_present_snps, C21_missing_snps_df)
+C21_snp_presence <- C21_snp_presence[order(C21_snp_presence$snp),]
+
+#C22
+C22_present_snps <- data.frame(snp = C22_filtered2$snp_code, presence = rep(1, length(C22_filtered2$snp_code)))
+snps_not_in_C22 <- snp_list[!(snp_list %in% C22_present_snps$snp)]
+C22_missing_snps_df <- data.frame(snp = snps_not_in_C22, presence = rep(0, length(snps_not_in_C22)))
+C22_snp_presence <- rbind(C22_present_snps, C22_missing_snps_df)
+C22_snp_presence <- C22_snp_presence[order(C22_snp_presence$snp),]
+
+#C23
+C23_present_snps <- data.frame(snp = C23_filtered2$snp_code, presence = rep(1, length(C23_filtered2$snp_code)))
+snps_not_in_C23 <- snp_list[!(snp_list %in% C23_present_snps$snp)]
+C23_missing_snps_df <- data.frame(snp = snps_not_in_C23, presence = rep(0, length(snps_not_in_C23)))
+C23_snp_presence <- rbind(C23_present_snps, C23_missing_snps_df)
+C23_snp_presence <- C23_snp_presence[order(C23_snp_presence$snp),]
+
+#C31
+C31_present_snps <- data.frame(snp = C31_filtered2$snp_code, presence = rep(1, length(C31_filtered2$snp_code)))
+snps_not_in_C31 <- snp_list[!(snp_list %in% C31_present_snps$snp)]
+C31_missing_snps_df <- data.frame(snp = snps_not_in_C31, presence = rep(0, length(snps_not_in_C31)))
+C31_snp_presence <- rbind(C31_present_snps, C31_missing_snps_df)
+C31_snp_presence <- C31_snp_presence[order(C31_snp_presence$snp),]
+
+#C32
+C32_present_snps <- data.frame(snp = C32_filtered2$snp_code, presence = rep(1, length(C32_filtered2$snp_code)))
+snps_not_in_C32 <- snp_list[!(snp_list %in% C32_present_snps$snp)]
+C32_missing_snps_df <- data.frame(snp = snps_not_in_C32, presence = rep(0, length(snps_not_in_C32)))
+C32_snp_presence <- rbind(C32_present_snps, C32_missing_snps_df)
+C32_snp_presence <- C32_snp_presence[order(C32_snp_presence$snp),]
+
+#C33
+C33_present_snps <- data.frame(snp = C33_filtered2$snp_code, presence = rep(1, length(C33_filtered2$snp_code)))
+snps_not_in_C33 <- snp_list[!(snp_list %in% C33_present_snps$snp)]
+C33_missing_snps_df <- data.frame(snp = snps_not_in_C33, presence = rep(0, length(snps_not_in_C33)))
+C33_snp_presence <- rbind(C33_present_snps, C33_missing_snps_df)
+C33_snp_presence <- C33_snp_presence[order(C33_snp_presence$snp),]
+
+# complete matrix of snp presence
+master_snp_list <- cbind(C11_snp_presence, C12_snp_presence[,2], C13_snp_presence[,2], C21_snp_presence[,2], C22_snp_presence[,2], C23_snp_presence[,2], C31_snp_presence[,2], C32_snp_presence[,2], C33_snp_presence[,2])
+
+# set row and column names
+rownames(master_snp_list) <- master_snp_list$snp
+master_snp_list <- master_snp_list[,-c(1)]
+colnames(master_snp_list) <- c("C11", "C12", "C13", "C21", "C22", "C23", "C31", "C32", "C33")
+
+
+```
+
+```{r}
+
+snp.norm = function(x) {
+   u <- mean(x)
+   p <- u / 2
+   (x - u) / sqrt(p * (1 - p))
+}
+
+# calculate PCA
+snp_list_norm <- apply(master_snp_list, 1, snp.norm)
+snp_list_norm <- t(snp_list_norm)
+snp_list_norm <- na.omit(snp_list_norm)
+colnames(snp_list_norm) <- c("control1", "control2", "control3", "DMSO1", "DMSO2", "DMSO3", "acetone1", "acetone2", "acetone3")
+
+pca_norm = prcomp(t(snp_list_norm), center=FALSE, scale=FALSE)
+
+plotting_coordinates <- as.data.frame(pca_norm$x[,1:2])
+
+plotting_coordinates$Group <- c(rep("control", 3), rep("DMSO", 3), rep("accetone", 3))
+
+# plot PCA
+figS2c <- ggplot(plotting_coordinates, aes(x = PC1, y = PC2, col = Group)) + 
+  geom_point(size = 2.5) + 
+  scale_color_manual(values=c("#c1272d", "#6495ED", "#eecc16")) +
+  guides(fill = guide_legend(title = "Group", override.aes = aes(label = ""))) +
+  geom_text_repel(aes(label = rownames(plotting_coordinates), size = 15),
+                   show.legend = FALSE,
+                  box.padding   = 0.35, 
+                  point.padding = 0.5,
+                  segment.color = 'black') +
+  theme_classic() +
+  theme(text = element_text(size = 15)) +
+  ggtitle("Parental subclone structure")
+
+figS2c
+
+```
+
+## Fig S2d: overlap of germline SNPs in controls
+```{r}
+
+# count how many times each frequency occurs
+germline_freq_counts <- ddply(unique_control_germline_SNP_counts, .(unique_control_germline_SNP_counts$Freq), nrow)
+names(germline_freq_counts) <- c("num_samples_with_SNP", "Freq")
+
+figS2d <- ggplot(data=germline_freq_counts, aes(x=num_samples_with_SNP, y=Freq)) +
+  geom_bar(stat="identity", color = "black", fill = "black") + 
+  scale_x_discrete(limits=c("1", "2", "3", "4", "5", "6", "7", "8", "9")) +
+  geom_text(aes(label=Freq), vjust=-0.3, size=4) +
+  theme_classic() +
+  theme(text = element_text(size = 14)) +
+  labs(title = "Overlap of germline SNPs in controls", x = "Number of samples with SNP", y = "Frequency")
+
+figS2d
+
+```
+
+
+
+# Supplementary Figure 3: SBS mutation pattern of all samples
+
+```{r}
+
+# control samples
+figS3a <- plot_sample_counts(musica_all, c("control_rep1", "control_rep2", "control_rep3", "control_DMSO_rep1", "control_DMSO_rep2", "control_DMSO_rep3", "control_acetone_rep1", "control_acetone_rep2", "control_acetone_rep3"), "SBS96", show_x_labels = FALSE)
+figS3a
+
+# exposure samples
+figS3b <- plot_sample_counts(musica_all, c("BaP_5nM_DMSO_rep1", "BaP_5nM_DMSO_rep2", "BaP_5nM_DMSO_rep3", "BaP_5nM_DMSO_rep4", "NTCU_0.5nM_Acetone_rep1", "NTCU_0.5nM_Acetone_rep2", "NTCU_0.5nM_Acetone_rep3", "NTCU_0.5nM_Acetone_rep4", "NNK_0.01nM_DMSO_rep1", "NNK_0.01nM_DMSO_rep2", "NNK_0.01nM_DMSO_rep3", "NNK_0.01nM_DMSO_rep4", "NNK_1.0nM_DMSO_rep1", "NNK_1.0nM_DMSO_rep2", "NNK_1.0nM_DMSO_rep3", "NNK_1.0nM_DMSO_rep4"), "SBS96", show_x_labels = FALSE)
+figS3b
+
+```
+# Supplementary Figure 5: DBS signature analysis
+
+## Discover DBS signatures
+
+```{r discover DBS signatures}
+
+discover_signatures(musica = musica_all, modality = "DBS78", 
+                              num_signatures = 3, algorithm = "nmf", 
+                              nstart = 10)
+
+```
+
+## Fig S5a: DBS signatures
+
+```{r}
+
+figS5a <- plot_signatures(musica_all, "nmf3", modality = "DBS78", same_scale = FALSE)
+figS5a
+
+```
+
+## Fig S5b: DBS exposures
+
+```{r}
+
+figS5b <- plot_exposures(musica_all, "nmf3", modality = "DBS78", plot_type = "bar", group_by = "annotation", annotation = "Exposure", proportional = TRUE)
+figS5b
+
+```
+
+## Fig S5c: Compare DBS to cosmic
+
+```{r}
+
+figS5c <- compare_cosmic_v3(musica_all, "nmf3", sample_type = "genome", modality = "DBS78", threshold = 0.8)
+figS5c
+
+```
+
+
+# Supplementary Figure 6: IND signature analysis
+
+## Discover IND signatures
+```{r discover IND signatures}
+
+# discover signautres
+discover_signatures(musica = musica_all, modality = "IND83", 
+                    num_signatures = 3, algorithm = "nmf", 
+                    nstart = 10)
+
+```
+
+## Fig S6a: IND signatures
+```{r}
+
+figS6a <- plot_signatures(musica_all, "nmf3", modality = "IND83", same_scale = FALSE)
+figS6a 
+
+```
+
+## Fig S6b: IND exposures
+```{r}
+
+figS6b <- plot_exposures(musica_all, "nmf3", modality = "IND83", plot_type = "bar", group_by = "annotation", annotation = "Exposure", proportional = TRUE)
+figS6b
+
+```
+## Fig S6c: Compare IND to cosmic
+
+```{r}
+
+figS6c<- compare_cosmic_v3(musica_all, model_id = "nmf3", sample_type = "genome", modality = "IND83", threshold = 0.8, result_rename = "Predicted Signatures")
+figS6c
+
+```
+
+
