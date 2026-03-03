@@ -30,8 +30,68 @@ library(readxl)
 
 ```{r}
 
-# Read in variants
-all_variants <- read.csv("sample_variants.csv")
+#establish file paths
+C11_vcf_file_path <- "../data/vcf/final_rerun/C1-1-vs-C1-3-filtered.vcf"
+C12_vcf_file_path <- "../data/vcf/final_rerun/C1-2-vs-C1-3-filtered.vcf"
+C13_vcf_file_path <- "../data/vcf/final_rerun/C1-3-vs-C1-2-filtered.vcf"
+C21_vcf_file_path <- "../data/vcf/final_rerun/C2-1-vs-C1-3-filtered.vcf"
+C22_vcf_file_path <- "../data/vcf/final_rerun/C2-2-vs-C1-3-filtered.vcf"
+C23_vcf_file_path <- "../data/vcf/final_rerun/C2-3-vs-C1-3-filtered.vcf"
+C31_vcf_file_path <- "../data/vcf/final_rerun/C3-1-vs-C1-3-filtered.vcf"
+C32_vcf_file_path <- "../data/vcf/final_rerun/C3-2-vs-C1-3-filtered.vcf"
+C33_vcf_file_path <- "../data/vcf/final_rerun/C3-3-vs-C1-3-filtered.vcf"
+C61_vcf_file_path <- "../data/vcf/final_rerun/C6-1-vs-C2-1-filtered.vcf"
+C62_vcf_file_path <- "../data/vcf/final_rerun/C6-2-vs-C2-1-filtered.vcf"
+C63_vcf_file_path <- "../data/vcf/final_rerun/C6-3-vs-C2-1-filtered.vcf"
+C64_vcf_file_path <- "../data/vcf/final_rerun/C6-4-vs-C2-1-filtered.vcf"
+C71_vcf_file_path <- "../data/vcf/final_rerun/C7-1-vs-C3-1-filtered.vcf"
+C72_vcf_file_path <- "../data/vcf/final_rerun/C7-2-vs-C3-1-filtered.vcf"
+C73_vcf_file_path <- "../data/vcf/final_rerun/C7-3-vs-C3-1-filtered.vcf"
+C74_vcf_file_path <- "../data/vcf/final_rerun/C7-4-vs-C3-1-filtered.vcf"
+C81_vcf_file_path <- "../data/vcf/final_rerun/C8-1-vs-C2-1-filtered.vcf"
+C82_vcf_file_path <- "../data/vcf/final_rerun/C8-2-vs-C2-1-filtered.vcf"
+C83_vcf_file_path <- "../data/vcf/final_rerun/C8-3-vs-C2-1-filtered.vcf"
+C84_vcf_file_path <- "../data/vcf/final_rerun/C8-4-vs-C2-1-filtered.vcf"
+C91_vcf_file_path <- "../data/vcf/final_rerun/C9-1-vs-C2-1-filtered.vcf"
+C92_vcf_file_path <- "../data/vcf/final_rerun/C9-2-vs-C2-1-filtered.vcf"
+C93_vcf_file_path <- "../data/vcf/final_rerun/C9-3-vs-C2-1-filtered.vcf"
+C94_vcf_file_path <- "../data/vcf/final_rerun/C9-4-vs-C2-1-filtered.vcf"
+
+# read in variants
+C11_variants <- extract_variants_from_vcf_file(vcf_file = C11_vcf_file_path, id = "C1-1", rename = "control_rep1")
+C12_variants <- extract_variants_from_vcf_file(vcf_file = C12_vcf_file_path, id = "C1-2", rename = "control_rep2")
+C13_variants <- extract_variants_from_vcf_file(vcf_file = C13_vcf_file_path, id = "C1-3", rename = "control_rep3")
+C21_variants <- extract_variants_from_vcf_file(vcf_file = C21_vcf_file_path, id = "C2-1", rename = "control_DMSO_rep1")
+C22_variants <- extract_variants_from_vcf_file(vcf_file = C22_vcf_file_path, id = "C2-2", rename = "control_DMSO_rep2")
+C23_variants <- extract_variants_from_vcf_file(vcf_file = C23_vcf_file_path, id = "C2-3", rename = "control_DMSO_rep3")
+C31_variants <- extract_variants_from_vcf_file(vcf_file = C31_vcf_file_path, id = "C3-1", rename = "control_acetone_rep1")
+C32_variants <- extract_variants_from_vcf_file(vcf_file = C32_vcf_file_path, id = "C3-2", rename = "control_acetone_rep2")
+C33_variants <- extract_variants_from_vcf_file(vcf_file = C33_vcf_file_path, id = "C3-3", rename = "control_acetone_rep3")
+C61_variants <- extract_variants_from_vcf_file(vcf_file = C61_vcf_file_path, id = "C6-1", rename = "BaP_5nM_DMSO_rep1")
+C62_variants <- extract_variants_from_vcf_file(vcf_file = C62_vcf_file_path, id = "C6-2", rename = "BaP_5nM_DMSO_rep2")
+C63_variants <- extract_variants_from_vcf_file(vcf_file = C63_vcf_file_path, id = "C6-3", rename = "BaP_5nM_DMSO_rep3")
+C64_variants <- extract_variants_from_vcf_file(vcf_file = C64_vcf_file_path, id = "C6-4", rename = "BaP_5nM_DMSO_rep4")
+C71_variants <- extract_variants_from_vcf_file(vcf_file = C71_vcf_file_path, id = "C7-1", rename = "NTCU_0.5nM_Acetone_rep1")
+C72_variants <- extract_variants_from_vcf_file(vcf_file = C72_vcf_file_path, id = "C7-2", rename = "NTCU_0.5nM_Acetone_rep2")
+C73_variants <- extract_variants_from_vcf_file(vcf_file = C73_vcf_file_path, id = "C7-3", rename = "NTCU_0.5nM_Acetone_rep3")
+C74_variants <- extract_variants_from_vcf_file(vcf_file = C74_vcf_file_path, id = "C7-4", rename = "NTCU_0.5nM_Acetone_rep4")
+C81_variants <- extract_variants_from_vcf_file(vcf_file = C81_vcf_file_path, id = "C8-1", rename = "NNK_0.01nM_DMSO_rep1")
+C82_variants <- extract_variants_from_vcf_file(vcf_file = C82_vcf_file_path, id = "C8-2", rename = "NNK_0.01nM_DMSO_rep2")
+C83_variants <- extract_variants_from_vcf_file(vcf_file = C83_vcf_file_path, id = "C8-3", rename = "NNK_0.01nM_DMSO_rep3")
+C84_variants <- extract_variants_from_vcf_file(vcf_file = C84_vcf_file_path, id = "C8-4", rename = "NNK_0.01nM_DMSO_rep4")
+C91_variants <- extract_variants_from_vcf_file(vcf_file = C91_vcf_file_path, id = "C9-1", rename = "NNK_1.0nM_DMSO_rep1")
+C92_variants <- extract_variants_from_vcf_file(vcf_file = C92_vcf_file_path, id = "C9-2", rename = "NNK_1.0nM_DMSO_rep2")
+C93_variants <- extract_variants_from_vcf_file(vcf_file = C93_vcf_file_path, id = "C9-3", rename = "NNK_1.0nM_DMSO_rep3")
+C94_variants <- extract_variants_from_vcf_file(vcf_file = C94_vcf_file_path, id = "C9-4", rename = "NNK_1.0nM_DMSO_rep4")
+
+# aggreagate variants from all samples
+all_variants <- rbind(C11_variants, C12_variants, C13_variants,
+                      C21_variants, C22_variants, C23_variants,
+                      C31_variants, C32_variants, C33_variants,
+                      C61_variants, C62_variants, C63_variants, C64_variants,
+                      C71_variants, C72_variants, C73_variants, C74_variants,
+                      C81_variants, C82_variants, C83_variants, C84_variants,
+                      C91_variants, C92_variants, C93_variants, C94_variants)
 
 # select genome
 g <- select_genome("hg38")
@@ -321,7 +381,7 @@ fig3c
 ```{r}
 
 # load variants
-gl_variants <- as.data.frame(read_excel("Murine_Variant_Calls_Gomez-Lopez_2025.xlsx"))
+gl_variants <- as.data.frame(read_excel("../data/Murine_Variant_Calls_Gomez-Lopez_2025.xlsx"))
 
 # add column for variant end position
 gl_variants$end <- gl_variants$Pos
@@ -509,21 +569,32 @@ figS2b
 
 ```{r}
 
-# read in germline variants
-control_sample_germline_variants <- read.csv("control_sample_germline_variants.csv")
+# establish filepaths
+C11_germline_vcf_file_path <- "../data/vcf/haplotype_caller_results/no_gvcf/C1-1.vcf.gz"
+C12_germline_vcf_file_path <- "../data/vcf/haplotype_caller_results/no_gvcf/C1-2.vcf.gz"
+C13_germline_vcf_file_path <- "../data/vcf/haplotype_caller_results/no_gvcf/C1-3.vcf.gz"
 
-# separate samples
-C11_germline_variants <- control_sample_germline_variants[control_sample_germline_variants$sample == "control_rep1",]
-C12_germline_variants <- control_sample_germline_variants[control_sample_germline_variants$sample == "control_rep2",]
-C13_germline_variants <- control_sample_germline_variants[control_sample_germline_variants$sample == "control_rep3",]
+C21_germline_vcf_file_path <- "../data/vcf/haplotype_caller_results/no_gvcf/C2-1.vcf.gz"
+C22_germline_vcf_file_path <- "../data/vcf/haplotype_caller_results/no_gvcf/C2-2.vcf.gz"
+C23_germline_vcf_file_path <- "../data/vcf/haplotype_caller_results/no_gvcf/C2-3.vcf.gz"
 
-C21_germline_variants <- control_sample_germline_variants[control_sample_germline_variants$sample == "control_DMSO_rep1",]
-C22_germline_variants <- control_sample_germline_variants[control_sample_germline_variants$sample == "control_DMSO_rep2",]
-C23_germline_variants <- control_sample_germline_variants[control_sample_germline_variants$sample == "control_DMSO_rep3",]
+C31_germline_vcf_file_path <- "../data/vcf/haplotype_caller_results/no_gvcf/C3-1.vcf.gz"
+C32_germline_vcf_file_path <- "../data/vcf/haplotype_caller_results/no_gvcf/C3-2.vcf.gz"
+C33_germline_vcf_file_path <- "../data/vcf/haplotype_caller_results/no_gvcf/C3-3.vcf.gz"
 
-C31_germline_variants <- control_sample_germline_variants[control_sample_germline_variants$sample == "control_acetone_rep1",]
-C32_germline_variants <- control_sample_germline_variants[control_sample_germline_variants$sample == "control_acetone_rep2",]
-C33_germline_variants <- control_sample_germline_variants[control_sample_germline_variants$sample == "control_acetone_rep3",]
+# load in variants
+C11_germline_variants <- extract_variants_from_vcf_file(vcf_file = C11_germline_vcf_file_path, id = "C1-1", rename = "control_rep1", filter = FALSE)
+C12_germline_variants <- extract_variants_from_vcf_file(vcf_file = C12_germline_vcf_file_path, id = "C1-2", rename = "control_rep2", filter = FALSE)
+C13_germline_variants <- extract_variants_from_vcf_file(vcf_file = C13_germline_vcf_file_path, id = "C1-3", rename = "control_rep3", filter = FALSE)
+
+C21_germline_variants <- extract_variants_from_vcf_file(vcf_file = C21_germline_vcf_file_path, id = "C2-1", rename = "control_DMSO_rep1", filter = FALSE)
+C22_germline_variants <- extract_variants_from_vcf_file(vcf_file = C22_germline_vcf_file_path, id = "C2-2", rename = "control_DMSO_rep2", filter = FALSE)
+C23_germline_variants <- extract_variants_from_vcf_file(vcf_file = C23_germline_vcf_file_path, id = "C2-3", rename = "control_DMSO_rep3", filter = FALSE)
+
+C31_germline_variants <- extract_variants_from_vcf_file(vcf_file = C31_germline_vcf_file_path, id = "C3-1", rename = "control_acetone_rep1", filter = FALSE)
+C32_germline_variants <- extract_variants_from_vcf_file(vcf_file = C32_germline_vcf_file_path, id = "C3-2", rename = "control_acetone_rep2", filter = FALSE)
+C33_germline_variants <- extract_variants_from_vcf_file(vcf_file = C33_germline_vcf_file_path, id = "C3-3", rename = "control_acetone_rep3", filter = FALSE)
+
 
 # get unique variants in each sample and remove unneeded info
 C11 <- unique(data.frame(sample = C11_germline_variants$sample, chrom = C11_germline_variants$chr, start = C11_germline_variants$start, end = C11_germline_variants$end))
