@@ -67,22 +67,22 @@ C23_variants <- extract_variants_from_vcf_file(vcf_file = C23_vcf_file_path, id 
 C31_variants <- extract_variants_from_vcf_file(vcf_file = C31_vcf_file_path, id = "C3-1", rename = "control_acetone_rep1")
 C32_variants <- extract_variants_from_vcf_file(vcf_file = C32_vcf_file_path, id = "C3-2", rename = "control_acetone_rep2")
 C33_variants <- extract_variants_from_vcf_file(vcf_file = C33_vcf_file_path, id = "C3-3", rename = "control_acetone_rep3")
-C61_variants <- extract_variants_from_vcf_file(vcf_file = C61_vcf_file_path, id = "C6-1", rename = "BaP_5nM_DMSO_rep1")
-C62_variants <- extract_variants_from_vcf_file(vcf_file = C62_vcf_file_path, id = "C6-2", rename = "BaP_5nM_DMSO_rep2")
-C63_variants <- extract_variants_from_vcf_file(vcf_file = C63_vcf_file_path, id = "C6-3", rename = "BaP_5nM_DMSO_rep3")
-C64_variants <- extract_variants_from_vcf_file(vcf_file = C64_vcf_file_path, id = "C6-4", rename = "BaP_5nM_DMSO_rep4")
-C71_variants <- extract_variants_from_vcf_file(vcf_file = C71_vcf_file_path, id = "C7-1", rename = "NTCU_0.5nM_Acetone_rep1")
-C72_variants <- extract_variants_from_vcf_file(vcf_file = C72_vcf_file_path, id = "C7-2", rename = "NTCU_0.5nM_Acetone_rep2")
-C73_variants <- extract_variants_from_vcf_file(vcf_file = C73_vcf_file_path, id = "C7-3", rename = "NTCU_0.5nM_Acetone_rep3")
-C74_variants <- extract_variants_from_vcf_file(vcf_file = C74_vcf_file_path, id = "C7-4", rename = "NTCU_0.5nM_Acetone_rep4")
-C81_variants <- extract_variants_from_vcf_file(vcf_file = C81_vcf_file_path, id = "C8-1", rename = "NNK_0.01nM_DMSO_rep1")
-C82_variants <- extract_variants_from_vcf_file(vcf_file = C82_vcf_file_path, id = "C8-2", rename = "NNK_0.01nM_DMSO_rep2")
-C83_variants <- extract_variants_from_vcf_file(vcf_file = C83_vcf_file_path, id = "C8-3", rename = "NNK_0.01nM_DMSO_rep3")
-C84_variants <- extract_variants_from_vcf_file(vcf_file = C84_vcf_file_path, id = "C8-4", rename = "NNK_0.01nM_DMSO_rep4")
-C91_variants <- extract_variants_from_vcf_file(vcf_file = C91_vcf_file_path, id = "C9-1", rename = "NNK_1.0nM_DMSO_rep1")
-C92_variants <- extract_variants_from_vcf_file(vcf_file = C92_vcf_file_path, id = "C9-2", rename = "NNK_1.0nM_DMSO_rep2")
-C93_variants <- extract_variants_from_vcf_file(vcf_file = C93_vcf_file_path, id = "C9-3", rename = "NNK_1.0nM_DMSO_rep3")
-C94_variants <- extract_variants_from_vcf_file(vcf_file = C94_vcf_file_path, id = "C9-4", rename = "NNK_1.0nM_DMSO_rep4")
+C61_variants <- extract_variants_from_vcf_file(vcf_file = C61_vcf_file_path, id = "C6-1", rename = "BaP_5uM_DMSO_rep1")
+C62_variants <- extract_variants_from_vcf_file(vcf_file = C62_vcf_file_path, id = "C6-2", rename = "BaP_5uM_DMSO_rep2")
+C63_variants <- extract_variants_from_vcf_file(vcf_file = C63_vcf_file_path, id = "C6-3", rename = "BaP_5uM_DMSO_rep3")
+C64_variants <- extract_variants_from_vcf_file(vcf_file = C64_vcf_file_path, id = "C6-4", rename = "BaP_5uM_DMSO_rep4")
+C71_variants <- extract_variants_from_vcf_file(vcf_file = C71_vcf_file_path, id = "C7-1", rename = "NTCU_0.5uM_Acetone_rep1")
+C72_variants <- extract_variants_from_vcf_file(vcf_file = C72_vcf_file_path, id = "C7-2", rename = "NTCU_0.5uM_Acetone_rep2")
+C73_variants <- extract_variants_from_vcf_file(vcf_file = C73_vcf_file_path, id = "C7-3", rename = "NTCU_0.5uM_Acetone_rep3")
+C74_variants <- extract_variants_from_vcf_file(vcf_file = C74_vcf_file_path, id = "C7-4", rename = "NTCU_0.5uM_Acetone_rep4")
+C81_variants <- extract_variants_from_vcf_file(vcf_file = C81_vcf_file_path, id = "C8-1", rename = "NNK_0.01uM_DMSO_rep1")
+C82_variants <- extract_variants_from_vcf_file(vcf_file = C82_vcf_file_path, id = "C8-2", rename = "NNK_0.01uM_DMSO_rep2")
+C83_variants <- extract_variants_from_vcf_file(vcf_file = C83_vcf_file_path, id = "C8-3", rename = "NNK_0.01uM_DMSO_rep3")
+C84_variants <- extract_variants_from_vcf_file(vcf_file = C84_vcf_file_path, id = "C8-4", rename = "NNK_0.01uM_DMSO_rep4")
+C91_variants <- extract_variants_from_vcf_file(vcf_file = C91_vcf_file_path, id = "C9-1", rename = "NNK_1.0uM_DMSO_rep1")
+C92_variants <- extract_variants_from_vcf_file(vcf_file = C92_vcf_file_path, id = "C9-2", rename = "NNK_1.0uM_DMSO_rep2")
+C93_variants <- extract_variants_from_vcf_file(vcf_file = C93_vcf_file_path, id = "C9-3", rename = "NNK_1.0uM_DMSO_rep3")
+C94_variants <- extract_variants_from_vcf_file(vcf_file = C94_vcf_file_path, id = "C9-4", rename = "NNK_1.0uM_DMSO_rep4")
 
 # aggreagate variants from all samples
 all_variants <- rbind(C11_variants, C12_variants, C13_variants,
@@ -181,7 +181,7 @@ fig1b
 
 ```{r}
 
-fig2a <- plot_sample_counts(musica_all, c("BaP_5nM_DMSO_rep2", "NTCU_0.5nM_Acetone_rep2", "NNK_0.01nM_DMSO_rep2", "NNK_1.0nM_DMSO_rep2", "control_rep2"), "SBS96", same_scale = FALSE, text_size = 12)
+fig2a <- plot_sample_counts(musica_all, c("BaP_5uM_DMSO_rep2", "NTCU_0.5uM_Acetone_rep2", "NNK_0.01uM_DMSO_rep2", "NNK_1.0uM_DMSO_rep2", "control_rep2"), "SBS96", same_scale = FALSE, text_size = 12)
 
 fig2a
 
@@ -818,7 +818,7 @@ figS3a <- plot_sample_counts(musica_all, c("control_rep1", "control_rep2", "cont
 figS3a
 
 # exposure samples
-figS3b <- plot_sample_counts(musica_all, c("BaP_5nM_DMSO_rep1", "BaP_5nM_DMSO_rep2", "BaP_5nM_DMSO_rep3", "BaP_5nM_DMSO_rep4", "NTCU_0.5nM_Acetone_rep1", "NTCU_0.5nM_Acetone_rep2", "NTCU_0.5nM_Acetone_rep3", "NTCU_0.5nM_Acetone_rep4", "NNK_0.01nM_DMSO_rep1", "NNK_0.01nM_DMSO_rep2", "NNK_0.01nM_DMSO_rep3", "NNK_0.01nM_DMSO_rep4", "NNK_1.0nM_DMSO_rep1", "NNK_1.0nM_DMSO_rep2", "NNK_1.0nM_DMSO_rep3", "NNK_1.0nM_DMSO_rep4"), "SBS96", show_x_labels = FALSE)
+figS3b <- plot_sample_counts(musica_all, c("BaP_5uM_DMSO_rep1", "BaP_5uM_DMSO_rep2", "BaP_5uM_DMSO_rep3", "BaP_5uM_DMSO_rep4", "NTCU_0.5uM_Acetone_rep1", "NTCU_0.5uM_Acetone_rep2", "NTCU_0.5uM_Acetone_rep3", "NTCU_0.5uM_Acetone_rep4", "NNK_0.01uM_DMSO_rep1", "NNK_0.01uM_DMSO_rep2", "NNK_0.01uM_DMSO_rep3", "NNK_0.01uM_DMSO_rep4", "NNK_1.0uM_DMSO_rep1", "NNK_1.0uM_DMSO_rep2", "NNK_1.0uM_DMSO_rep3", "NNK_1.0uM_DMSO_rep4"), "SBS96", show_x_labels = FALSE)
 figS3b
 
 ```
